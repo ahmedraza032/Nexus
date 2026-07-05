@@ -1,34 +1,55 @@
-import React, { useState } from 'react';
-import { Search, Filter, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, MapPin, Loader2 } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { InvestorCard } from '../../components/investor/InvestorCard';
-import { investors } from '../../data/users';
+import api from '../../api/axiosConfig';
 
 export const InvestorsPage: React.FC = () => {
+  const [investors, setInvestors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   
+  useEffect(() => {
+    const fetchInvestors = async () => {
+      try {
+        const response = await api.get('/profiles?role=investor');
+        // Map _id from mongo to id for the frontend
+        const fetchedInvestors = response.data.map((user: any) => ({
+          ...user,
+          id: user._id
+        }));
+        setInvestors(fetchedInvestors);
+      } catch (error) {
+        console.error('Error fetching investors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvestors();
+  }, []);
+
   // Get unique investment stages and interests
-  const allStages = Array.from(new Set(investors.flatMap(i => i.investmentStage)));
-  const allInterests = Array.from(new Set(investors.flatMap(i => i.investmentInterests)));
+  const allStages = Array.from(new Set(investors.flatMap(i => i.investmentStage || [])));
+  const allInterests = Array.from(new Set(investors.flatMap(i => i.investmentInterests || [])));
   
   // Filter investors based on search and filters
   const filteredInvestors = investors.filter(investor => {
     const matchesSearch = searchQuery === '' || 
-      investor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.bio.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      investor.investmentInterests.some(interest => 
+      investor.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      investor.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      investor.investmentInterests?.some((interest: string) => 
         interest.toLowerCase().includes(searchQuery.toLowerCase())
       );
     
     const matchesStages = selectedStages.length === 0 ||
-      investor.investmentStage.some(stage => selectedStages.includes(stage));
+      investor.investmentStage?.some((stage: string) => selectedStages.includes(stage));
     
     const matchesInterests = selectedInterests.length === 0 ||
-      investor.investmentInterests.some(interest => selectedInterests.includes(interest));
+      investor.investmentInterests?.some((interest: string) => selectedInterests.includes(interest));
     
     return matchesSearch && matchesStages && matchesInterests;
   });
@@ -49,6 +70,14 @@ export const InvestorsPage: React.FC = () => {
     );
   };
   
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-primary-600" size={32} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -67,7 +96,7 @@ export const InvestorsPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Investment Stage</h3>
                 <div className="space-y-2">
-                  {allStages.map(stage => (
+                  {allStages.map((stage: any) => (
                     <button
                       key={stage}
                       onClick={() => toggleStage(stage)}
@@ -86,7 +115,7 @@ export const InvestorsPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Investment Interests</h3>
                 <div className="flex flex-wrap gap-2">
-                  {allInterests.map(interest => (
+                  {allInterests.map((interest: any) => (
                     <Badge
                       key={interest}
                       variant={selectedInterests.includes(interest) ? 'primary' : 'gray'}

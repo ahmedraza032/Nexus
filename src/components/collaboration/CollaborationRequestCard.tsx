@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, MessageCircle } from 'lucide-react';
 import { CollaborationRequest } from '../../types';
@@ -6,9 +6,9 @@ import { Card, CardBody, CardFooter } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
-import { findUserById } from '../../data/users';
 import { updateRequestStatus } from '../../data/collaborationRequests';
 import { formatDistanceToNow } from 'date-fns';
+import api from '../../api/axiosConfig';
 
 interface CollaborationRequestCardProps {
   request: CollaborationRequest;
@@ -20,7 +20,19 @@ export const CollaborationRequestCard: React.FC<CollaborationRequestCardProps> =
   onStatusUpdate
 }) => {
   const navigate = useNavigate();
-  const investor = findUserById(request.investorId);
+  const [investor, setInvestor] = useState<any>(null);
+  
+  useEffect(() => {
+    const fetchInvestor = async () => {
+      try {
+        const response = await api.get(`/profiles/${request.investorId}`);
+        setInvestor({ ...response.data, id: response.data._id });
+      } catch (error) {
+        console.error('Error fetching investor:', error);
+      }
+    };
+    fetchInvestor();
+  }, [request.investorId]);
   
   if (!investor) return null;
   

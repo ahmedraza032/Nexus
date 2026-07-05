@@ -1,27 +1,47 @@
-import React, { useState } from 'react';
-import { Search, Filter, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Filter, MapPin, Loader2 } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
-import { entrepreneurs } from '../../data/users';
+import api from '../../api/axiosConfig';
 
 export const EntrepreneursPage: React.FC = () => {
+  const [entrepreneurs, setEntrepreneurs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [selectedFundingRange, setSelectedFundingRange] = useState<string[]>([]);
   
+  useEffect(() => {
+    const fetchEntrepreneurs = async () => {
+      try {
+        const response = await api.get('/profiles?role=entrepreneur');
+        const fetchedEntrepreneurs = response.data.map((user: any) => ({
+          ...user,
+          id: user._id
+        }));
+        setEntrepreneurs(fetchedEntrepreneurs);
+      } catch (error) {
+        console.error('Error fetching entrepreneurs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEntrepreneurs();
+  }, []);
+
   // Get unique industries and funding ranges
-  const allIndustries = Array.from(new Set(entrepreneurs.map(e => e.industry)));
+  const allIndustries = Array.from(new Set(entrepreneurs.map(e => e.industry).filter(Boolean)));
   const fundingRanges = ['< $500K', '$500K - $1M', '$1M - $5M', '> $5M'];
   
   // Filter entrepreneurs based on search and filters
   const filteredEntrepreneurs = entrepreneurs.filter(entrepreneur => {
     const matchesSearch = searchQuery === '' || 
-      entrepreneur.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.startupName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.pitchSummary.toLowerCase().includes(searchQuery.toLowerCase());
+      entrepreneur.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entrepreneur.startupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entrepreneur.industry?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entrepreneur.pitchSummary?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesIndustry = selectedIndustries.length === 0 ||
       selectedIndustries.includes(entrepreneur.industry);
@@ -29,7 +49,9 @@ export const EntrepreneursPage: React.FC = () => {
     // Simple funding range filter based on the amount string
     const matchesFunding = selectedFundingRange.length === 0 || 
       selectedFundingRange.some(range => {
+        if (!entrepreneur.fundingNeeded) return false;
         const amount = parseInt(entrepreneur.fundingNeeded.replace(/[^0-9]/g, ''));
+        if (isNaN(amount)) return false;
         switch (range) {
           case '< $500K': return amount < 500;
           case '$500K - $1M': return amount >= 500 && amount <= 1000;
@@ -57,6 +79,14 @@ export const EntrepreneursPage: React.FC = () => {
         : [...prev, range]
     );
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-primary-600" size={32} />
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -76,7 +106,7 @@ export const EntrepreneursPage: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-900 mb-2">Industry</h3>
                 <div className="space-y-2">
-                  {allIndustries.map(industry => (
+                  {allIndustries.map((industry: any) => (
                     <button
                       key={industry}
                       onClick={() => toggleIndustry(industry)}

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, PieChart, Filter, Search, PlusCircle } from 'lucide-react';
+import { Users, PieChart, Filter, Search, PlusCircle, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
@@ -8,14 +8,34 @@ import { Badge } from '../../components/ui/Badge';
 import { EntrepreneurCard } from '../../components/entrepreneur/EntrepreneurCard';
 import { useAuth } from '../../context/AuthContext';
 import { Entrepreneur } from '../../types';
-import { entrepreneurs } from '../../data/users';
 import { getRequestsFromInvestor } from '../../data/collaborationRequests';
+import api from '../../api/axiosConfig';
 
 export const InvestorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [entrepreneurs, setEntrepreneurs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   
+  useEffect(() => {
+    const fetchEntrepreneurs = async () => {
+      try {
+        const response = await api.get('/profiles?role=entrepreneur');
+        const fetchedEntrepreneurs = response.data.map((u: any) => ({
+          ...u,
+          id: u._id
+        }));
+        setEntrepreneurs(fetchedEntrepreneurs);
+      } catch (error) {
+        console.error('Error fetching entrepreneurs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEntrepreneurs();
+  }, []);
+
   if (!user) return null;
   
   // Get collaboration requests sent by this investor
@@ -26,10 +46,10 @@ export const InvestorDashboard: React.FC = () => {
   const filteredEntrepreneurs = entrepreneurs.filter(entrepreneur => {
     // Search filter
     const matchesSearch = searchQuery === '' || 
-      entrepreneur.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.startupName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.industry.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entrepreneur.pitchSummary.toLowerCase().includes(searchQuery.toLowerCase());
+      entrepreneur.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entrepreneur.startupName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entrepreneur.industry?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entrepreneur.pitchSummary?.toLowerCase().includes(searchQuery.toLowerCase());
     
     // Industry filter
     const matchesIndustry = selectedIndustries.length === 0 || 
@@ -39,7 +59,7 @@ export const InvestorDashboard: React.FC = () => {
   });
   
   // Get unique industries for filter
-  const industries = Array.from(new Set(entrepreneurs.map(e => e.industry)));
+  const industries = Array.from(new Set(entrepreneurs.map(e => e.industry).filter(Boolean)));
   
   // Toggle industry selection
   const toggleIndustry = (industry: string) => {
@@ -50,6 +70,14 @@ export const InvestorDashboard: React.FC = () => {
     );
   };
   
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-primary-600" size={32} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -85,7 +113,7 @@ export const InvestorDashboard: React.FC = () => {
             <span className="text-sm font-medium text-gray-700">Filter by:</span>
             
             <div className="flex flex-wrap gap-2">
-              {industries.map(industry => (
+              {industries.map((industry: any) => (
                 <Badge
                   key={industry}
                   variant={selectedIndustries.includes(industry) ? 'primary' : 'gray'}

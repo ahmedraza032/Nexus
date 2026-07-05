@@ -8,9 +8,9 @@ import { ChatMessage } from '../../components/chat/ChatMessage';
 import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
 import { Message } from '../../types';
-import { findUserById } from '../../data/users';
 import { getMessagesBetweenUsers, sendMessage, getConversationsForUser } from '../../data/messages';
 import { MessageCircle } from 'lucide-react';
+import api from '../../api/axiosConfig';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -18,9 +18,24 @@ export const ChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [conversations, setConversations] = useState<any[]>([]);
+  const [chatPartner, setChatPartner] = useState<any>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
   
-  const chatPartner = userId ? findUserById(userId) : null;
+  useEffect(() => {
+    const fetchChatPartner = async () => {
+      if (!userId) {
+        setChatPartner(null);
+        return;
+      }
+      try {
+        const response = await api.get(`/profiles/${userId}`);
+        setChatPartner(response.data);
+      } catch (error) {
+        console.error('Error fetching chat partner:', error);
+      }
+    };
+    fetchChatPartner();
+  }, [userId]);
   
   useEffect(() => {
     // Load conversations

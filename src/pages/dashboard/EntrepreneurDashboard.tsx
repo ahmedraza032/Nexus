@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Bell, Calendar, TrendingUp, AlertCircle, PlusCircle } from 'lucide-react';
+import { Users, Bell, Calendar, TrendingUp, AlertCircle, PlusCircle, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
@@ -9,12 +9,13 @@ import { InvestorCard } from '../../components/investor/InvestorCard';
 import { useAuth } from '../../context/AuthContext';
 import { CollaborationRequest } from '../../types';
 import { getRequestsForEntrepreneur } from '../../data/collaborationRequests';
-import { investors } from '../../data/users';
+import api from '../../api/axiosConfig';
 
 export const EntrepreneurDashboard: React.FC = () => {
   const { user } = useAuth();
   const [collaborationRequests, setCollaborationRequests] = useState<CollaborationRequest[]>([]);
-  const [recommendedInvestors, setRecommendedInvestors] = useState(investors.slice(0, 3));
+  const [investors, setInvestors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     if (user) {
@@ -23,6 +24,24 @@ export const EntrepreneurDashboard: React.FC = () => {
       setCollaborationRequests(requests);
     }
   }, [user]);
+
+  useEffect(() => {
+    const fetchInvestors = async () => {
+      try {
+        const response = await api.get('/profiles?role=investor');
+        const fetchedInvestors = response.data.map((u: any) => ({
+          ...u,
+          id: u._id
+        }));
+        setInvestors(fetchedInvestors);
+      } catch (error) {
+        console.error('Error fetching investors:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchInvestors();
+  }, []);
   
   const handleRequestStatusUpdate = (requestId: string, status: 'accepted' | 'rejected') => {
     setCollaborationRequests(prevRequests => 
@@ -32,9 +51,16 @@ export const EntrepreneurDashboard: React.FC = () => {
     );
   };
   
-  if (!user) return null;
+  if (!user || loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="animate-spin text-primary-600" size={32} />
+      </div>
+    );
+  }
   
   const pendingRequests = collaborationRequests.filter(req => req.status === 'pending');
+  const recommendedInvestors = investors.slice(0, 3);
   
   return (
     <div className="space-y-6 animate-fade-in">

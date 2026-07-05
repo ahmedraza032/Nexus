@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Message } from '../../types';
 import { Avatar } from '../ui/Avatar';
-import { findUserById } from '../../data/users';
+import api from '../../api/axiosConfig';
 
 interface ChatMessageProps {
   message: Message;
@@ -10,7 +10,19 @@ interface ChatMessageProps {
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ message, isCurrentUser }) => {
-  const user = findUserById(message.senderId);
+  const [user, setUser] = useState<any>(null);
+  
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await api.get(`/profiles/${message.senderId}`);
+        setUser(response.data);
+      } catch (error) {
+        console.error('Error fetching chat user:', error);
+      }
+    };
+    fetchUser();
+  }, [message.senderId]);
   
   if (!user) return null;
   

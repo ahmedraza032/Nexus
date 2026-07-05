@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, Building2, MapPin, UserCircle, BarChart3, Briefcase } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
@@ -6,17 +6,48 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { findUserById } from '../../data/users';
 import { Investor } from '../../types';
+import api from '../../api/axiosConfig';
 
 export const InvestorProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
-  
-  // Fetch investor data
-  const investor = findUserById(id || '') as Investor | null;
-  
-  if (!investor || investor.role !== 'investor') {
+
+  const [investor, setInvestor] = useState<Investor | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get(`/profiles/${id}`);
+        const data = response.data;
+        if (data._id && !data.id) data.id = data._id;
+        if (data.role === 'investor') {
+          setInvestor(data as Investor);
+        } else {
+          setError('This profile is not an investor.');
+        }
+      } catch (err) {
+        setError('Investor not found.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (id) fetchProfile();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (error || !investor) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Investor not found</h2>
@@ -27,10 +58,11 @@ export const InvestorProfile: React.FC = () => {
       </div>
     );
   }
-  
-  const isCurrentUser = currentUser?.id === investor.id;
-  
+
+  const isCurrentUser = currentUser?.id === investor.id || currentUser?.id === (investor as any)._id;
+
   return (
+
     <div className="space-y-6 animate-fade-in">
       {/* Profile header */}
       <Card>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { MessageCircle, Users, Calendar, Building2, MapPin, UserCircle, FileText, DollarSign, Send } from 'lucide-react';
 import { Avatar } from '../../components/ui/Avatar';
@@ -6,18 +6,50 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { useAuth } from '../../context/AuthContext';
-import { findUserById } from '../../data/users';
-import { createCollaborationRequest, getRequestsFromInvestor } from '../../data/collaborationRequests';
 import { Entrepreneur } from '../../types';
+import api from '../../api/axiosConfig';
 
 export const EntrepreneurProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { user: currentUser } = useAuth();
-  
-  // Fetch entrepreneur data
-  const entrepreneur = findUserById(id || '') as Entrepreneur | null;
-  
-  if (!entrepreneur || entrepreneur.role !== 'entrepreneur') {
+
+  const [entrepreneur, setEntrepreneur] = useState<Entrepreneur | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get(`/profiles/${id}`);
+        const data = response.data;
+        // Normalize _id to id for frontend compatibility
+        if (data._id && !data.id) data.id = data._id;
+        if (data.role === 'entrepreneur') {
+          setEntrepreneur(data as Entrepreneur);
+        } else {
+          setError('This profile is not an entrepreneur.');
+        }
+      } catch (err: any) {
+        console.error('Error fetching profile:', err);
+        setError(`Entrepreneur not found. (Details: ${err.response?.data?.message || err.message})`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (id) fetchProfile();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (error || !entrepreneur) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold text-gray-900">Entrepreneur not found</h2>
@@ -28,28 +60,16 @@ export const EntrepreneurProfile: React.FC = () => {
       </div>
     );
   }
-  
-  const isCurrentUser = currentUser?.id === entrepreneur.id;
+
+  const isCurrentUser = currentUser?.id === entrepreneur.id || currentUser?.id === (entrepreneur as any)._id;
   const isInvestor = currentUser?.role === 'investor';
-  
-  // Check if the current investor has already sent a request to this entrepreneur
-  const hasRequestedCollaboration = isInvestor && id 
-    ? getRequestsFromInvestor(currentUser.id).some(req => req.entrepreneurId === id)
-    : false;
-  
+  const hasRequestedCollaboration = false; // collaboration request API to be wired in Week 2
+
   const handleSendRequest = () => {
-    if (isInvestor && currentUser && id) {
-      createCollaborationRequest(
-        currentUser.id,
-        id,
-        `I'm interested in learning more about ${entrepreneur.startupName} and would like to explore potential investment opportunities.`
-      );
-      
-      // In a real app, we would refresh the data or update state
-      // For this demo, we'll force a page reload
-      window.location.reload();
-    }
+    // Collaboration request API to be wired in Week 2
+    alert('Collaboration request feature coming soon!');
   };
+
   
   return (
     <div className="space-y-6 animate-fade-in">
@@ -115,12 +135,14 @@ export const EntrepreneurProfile: React.FC = () => {
             )}
             
             {isCurrentUser && (
-              <Button
-                variant="outline"
-                leftIcon={<UserCircle size={18} />}
-              >
-                Edit Profile
-              </Button>
+              <Link to="/settings">
+                <Button
+                  variant="outline"
+                  leftIcon={<UserCircle size={18} />}
+                >
+                  Edit Profile
+                </Button>
+              </Link>
             )}
           </div>
         </CardBody>
