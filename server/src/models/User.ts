@@ -2,6 +2,17 @@ import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 
+export interface INotification {
+  type: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  content: string;
+  time: string;
+  unread: boolean;
+}
+
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -10,6 +21,9 @@ export interface IUser extends Document {
   avatarUrl?: string;
   bio?: string;
   isOnline?: boolean;
+  profileViews?: number;
+  upcomingMeetings?: number;
+  notifications?: INotification[];
   createdAt: Date;
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
@@ -26,6 +40,18 @@ const userSchema = new Schema(
     avatarUrl: { type: String },
     bio: { type: String },
     isOnline: { type: Boolean, default: false },
+    profileViews: { type: Number, default: 0 },
+    upcomingMeetings: { type: Number, default: 0 },
+    notifications: [{
+      type: { type: String },
+      user: {
+        name: { type: String },
+        avatar: { type: String }
+      },
+      content: { type: String },
+      time: { type: String },
+      unread: { type: Boolean, default: true }
+    }],
     resetPasswordToken: String,
     resetPasswordExpire: Date,
   },

@@ -31,16 +31,24 @@ export const LoginPage: React.FC = () => {
     }
   };
   
-  // For demo purposes, pre-filled credentials
-  const fillDemoCredentials = (userRole: UserRole) => {
-    if (userRole === 'entrepreneur') {
-      setEmail('sarah@techwave.io');
-      setPassword('password123');
-    } else {
-      setEmail('michael@vcinnovate.com');
-      setPassword('password123');
-    }
+  // For demo purposes, quick login
+  const loginAsDemo = async (userRole: UserRole) => {
+    setError(null);
+    setIsLoading(true);
+    const demoEmail = userRole === 'entrepreneur' ? 'sarah@techwave.io' : 'michael@vcinnovate.com';
+    const demoPassword = 'password123';
+    
+    setEmail(demoEmail);
+    setPassword(demoPassword);
     setRole(userRole);
+    
+    try {
+      await login(demoEmail, demoPassword, userRole);
+      navigate(userRole === 'entrepreneur' ? '/dashboard/entrepreneur' : '/dashboard/investor');
+    } catch (err) {
+      setError((err as Error).message);
+      setIsLoading(false);
+    }
   };
   
   return (
@@ -167,16 +175,18 @@ export const LoginPage: React.FC = () => {
             <div className="mt-4 grid grid-cols-2 gap-3">
               <Button
                 variant="outline"
-                onClick={() => fillDemoCredentials('entrepreneur')}
+                onClick={() => loginAsDemo('entrepreneur')}
                 leftIcon={<Building2 size={16} />}
+                disabled={isLoading}
               >
                 Entrepreneur Demo
               </Button>
               
               <Button
                 variant="outline"
-                onClick={() => fillDemoCredentials('investor')}
+                onClick={() => loginAsDemo('investor')}
                 leftIcon={<CircleDollarSign size={16} />}
+                disabled={isLoading}
               >
                 Investor Demo
               </Button>

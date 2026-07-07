@@ -10,22 +10,30 @@ interface SidebarItemProps {
   to: string;
   icon: React.ReactNode;
   text: string;
+  badge?: number;
 }
 
-const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, text }) => {
+const SidebarItem: React.FC<SidebarItemProps> = ({ to, icon, text, badge }) => {
   return (
     <NavLink
       to={to}
       className={({ isActive }) => 
-        `flex items-center py-2.5 px-4 rounded-md transition-colors duration-200 ${
+        `flex items-center justify-between py-2.5 px-4 rounded-md transition-colors duration-200 ${
           isActive 
             ? 'bg-primary-50 text-primary-700' 
             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
         }`
       }
     >
-      <span className="mr-3">{icon}</span>
-      <span className="text-sm font-medium">{text}</span>
+      <div className="flex items-center">
+        <span className="mr-3">{icon}</span>
+        <span className="text-sm font-medium">{text}</span>
+      </div>
+      {badge !== undefined && badge > 0 && (
+        <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-primary-600 text-[10px] font-bold text-white">
+          {badge}
+        </span>
+      )}
     </NavLink>
   );
 };
@@ -35,13 +43,16 @@ export const Sidebar: React.FC = () => {
   
   if (!user) return null;
   
+  // Calculate unread notifications
+  const unreadCount = user?.notifications?.filter((n) => n.unread).length || 0;
+  
   // Define sidebar items based on user role
   const entrepreneurItems = [
     { to: '/dashboard/entrepreneur', icon: <Home size={20} />, text: 'Dashboard' },
     { to: '/profile/entrepreneur/' + user.id, icon: <Building2 size={20} />, text: 'My Startup' },
     { to: '/investors', icon: <CircleDollarSign size={20} />, text: 'Find Investors' },
     { to: '/messages', icon: <MessageCircle size={20} />, text: 'Messages' },
-    { to: '/notifications', icon: <Bell size={20} />, text: 'Notifications' },
+    { to: '/notifications', icon: <Bell size={20} />, text: 'Notifications', badge: unreadCount },
     { to: '/documents', icon: <FileText size={20} />, text: 'Documents' },
   ];
   
@@ -50,7 +61,7 @@ export const Sidebar: React.FC = () => {
     { to: '/profile/investor/' + user.id, icon: <CircleDollarSign size={20} />, text: 'My Portfolio' },
     { to: '/entrepreneurs', icon: <Users size={20} />, text: 'Find Startups' },
     { to: '/messages', icon: <MessageCircle size={20} />, text: 'Messages' },
-    { to: '/notifications', icon: <Bell size={20} />, text: 'Notifications' },
+    { to: '/notifications', icon: <Bell size={20} />, text: 'Notifications', badge: unreadCount },
     { to: '/deals', icon: <FileText size={20} />, text: 'Deals' },
   ];
   

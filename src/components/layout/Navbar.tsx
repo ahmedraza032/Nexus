@@ -29,6 +29,9 @@ export const Navbar: React.FC = () => {
     ? `/profile/${user.role}/${user.id}` 
     : '/login';
   
+  // Calculate unread notifications
+  const unreadCount = user?.notifications?.filter((n) => n.unread).length || 0;
+  
   const navLinks = [
     {
       icon: user?.role === 'entrepreneur' ? <Building2 size={18} /> : <CircleDollarSign size={18} />,
@@ -44,6 +47,7 @@ export const Navbar: React.FC = () => {
       icon: <Bell size={18} />,
       text: 'Notifications',
       path: user ? '/notifications' : '/login',
+      badge: unreadCount > 0 ? unreadCount : undefined,
     },
     {
       icon: <User size={18} />,
@@ -79,7 +83,14 @@ export const Navbar: React.FC = () => {
                     to={link.path}
                     className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50 rounded-md transition-colors duration-200"
                   >
-                    <span className="mr-2">{link.icon}</span>
+                    <span className="mr-2 relative">
+                      {link.icon}
+                      {link.badge !== undefined && (
+                        <span className="absolute -top-1 -right-2 flex items-center justify-center h-4 w-4 rounded-full bg-primary-600 text-[10px] font-bold text-white">
+                          {link.badge}
+                        </span>
+                      )}
+                    </span>
                     {link.text}
                   </Link>
                 ))}

@@ -119,7 +119,7 @@ export const EntrepreneurDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-accent-700">Upcoming Meetings</p>
-                <h3 className="text-xl font-semibold text-accent-900">2</h3>
+                <h3 className="text-xl font-semibold text-accent-900">{user.upcomingMeetings || 0}</h3>
               </div>
             </div>
           </CardBody>
@@ -133,7 +133,7 @@ export const EntrepreneurDashboard: React.FC = () => {
               </div>
               <div>
                 <p className="text-sm font-medium text-success-700">Profile Views</p>
-                <h3 className="text-xl font-semibold text-success-900">24</h3>
+                <h3 className="text-xl font-semibold text-success-900">{user.profileViews || 0}</h3>
               </div>
             </div>
           </CardBody>

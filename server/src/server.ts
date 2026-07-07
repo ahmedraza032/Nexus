@@ -4,10 +4,14 @@ import dotenv from 'dotenv';
 import connectDB from './config/db';
 import authRoutes from './routes/authRoutes';
 import profileRoutes from './routes/profileRoutes';
+import { seedDemoUsers } from './scripts/seedDemoUsers';
 
 dotenv.config();
 
-connectDB();
+// Connect to DB and seed demo users
+connectDB().then(() => {
+  seedDemoUsers();
+});
 
 const app = express();
 

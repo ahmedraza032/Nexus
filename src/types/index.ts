@@ -1,5 +1,18 @@
 export type UserRole = 'entrepreneur' | 'investor';
 
+export interface AppNotification {
+  id?: string;
+  _id?: string;
+  type: string;
+  user: {
+    name: string;
+    avatar: string;
+  };
+  content: string;
+  time: string;
+  unread: boolean;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -8,6 +21,9 @@ export interface User {
   avatarUrl: string;
   bio: string;
   isOnline?: boolean;
+  profileViews?: number;
+  upcomingMeetings?: number;
+  notifications?: AppNotification[];
   createdAt: string;
 }
 
