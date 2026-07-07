@@ -92,6 +92,85 @@ export interface AuthContextType {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
   updateProfile: (userId: string, updates: Partial<User>) => Promise<void>;
+  markNotificationsAsRead: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+
+// ─── Meeting Types ────────────────────────────────────────────────────────────
+
+export type MeetingStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+
+export interface MeetingParticipant {
+  _id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatarUrl?: string;
+}
+
+export interface Meeting {
+  _id: string;
+  title: string;
+  organizer: MeetingParticipant;
+  attendee: MeetingParticipant;
+  startTime: string;   // ISO 8601
+  endTime: string;     // ISO 8601
+  status: MeetingStatus;
+  message?: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduleMeetingPayload {
+  title: string;
+  attendeeId: string;
+  startTime: string;   // ISO 8601
+  endTime: string;     // ISO 8601
+  message?: string;
+  location?: string;
+}
+
+export interface UpdateMeetingPayload {
+  title?: string;
+  startTime?: string;
+  endTime?: string;
+  message?: string;
+  location?: string;
+}
+
+/** Shape expected by react-big-calendar */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  resource: Meeting;
+}
+
+// ─── Connection Types ────────────────────────────────────────────────────────────
+
+/** What the server returns for /api/connections/status/:userId */
+export type ConnectionClientStatus =
+  | 'none'
+  | 'pending_sent'
+  | 'pending_received'
+  | 'accepted';
+
+export interface Connection {
+  _id: string;
+  requester: MeetingParticipant;
+  recipient: MeetingParticipant;
+  status: 'pending' | 'accepted' | 'rejected';
+  message?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConnectionStatusResponse {
+  status: ConnectionClientStatus;
+  connectionId: string | null;
+  connection?: Connection;
 }

@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import connectDB from './config/db';
 import authRoutes from './routes/authRoutes';
 import profileRoutes from './routes/profileRoutes';
+import meetingRoutes from './routes/meetingRoutes';
+import connectionRoutes from './routes/connectionRoutes';
 import { seedDemoUsers } from './scripts/seedDemoUsers';
 
 dotenv.config();
@@ -29,6 +31,8 @@ app.use((req, _res, next) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profiles', profileRoutes);
+app.use('/api/meetings', meetingRoutes);
+app.use('/api/connections', connectionRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running...');

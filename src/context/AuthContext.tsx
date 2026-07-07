@@ -24,9 +24,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const parsedUser = JSON.parse(storedUser);
           setUser(parsedUser);
           
-          // Optionally, verify token or fetch fresh profile data here
-          // const response = await api.get('/profiles/me');
-          // setUser({ ...response.data, token: parsedUser.token });
+          // Fetch fresh profile data
+          try {
+            const response = await api.get('/profiles/me');
+            const freshUser = { ...response.data, token: parsedUser.token };
+            if (freshUser._id && !freshUser.id) {
+              freshUser.id = freshUser._id;
+            }
+            setUser(freshUser);
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(freshUser));
+          } catch (apiError) {
+            console.error("Failed to fetch fresh profile data", apiError);
+            // Fallback to parsedUser is already handled by the initial setUser
+          }
         } catch (error) {
           console.error("Failed to restore session", error);
           localStorage.removeItem(USER_STORAGE_KEY);
@@ -36,6 +46,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     fetchUser();
+
+    // Set up polling for real-time updates (e.g. notifications)
+    const pollInterval = setInterval(async () => {
+      const token = localStorage.getItem(USER_STORAGE_KEY) ? JSON.parse(localStorage.getItem(USER_STORAGE_KEY)!).token : null;
+      if (!token) return;
+
+      try {
+        const response = await api.get('/profiles/me');
+        const freshUser = { ...response.data, token };
+        if (freshUser._id && !freshUser.id) {
+          freshUser.id = freshUser._id;
+        }
+        
+        setUser(prevUser => {
+          if (!prevUser) return freshUser;
+          
+          // Check for new unread notifications
+          const prevUnread = prevUser.notifications?.filter(n => n.unread).length || 0;
+          const newUnread = freshUser.notifications?.filter((n: any) => n.unread).length || 0;
+          
+          if (newUnread > prevUnread) {
+            toast.success('You have new notifications!');
+          }
+          
+          // Only update state if something changed to avoid unnecessary re-renders
+          if (JSON.stringify(prevUser) !== JSON.stringify(freshUser)) {
+            localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(freshUser));
+            return freshUser;
+          }
+          return prevUser;
+        });
+      } catch (error) {
+        // Silent fail on polling errors
+      }
+    }, 15000);
+
+    return () => clearInterval(pollInterval);
   }, []);
 
   const login = async (email: string, password: string, role: UserRole): Promise<void> => {
@@ -140,6 +187,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const markNotificationsAsRead = async (): Promise<void> => {
+    try {
+      const response = await api.put('/profiles/me/notifications/read');
+      const updatedUser = response.data;
+      if (updatedUser._id && !updatedUser.id) {
+        updatedUser.id = updatedUser._id;
+      }
+      const fullUpdatedUser = { ...user, ...updatedUser, token: user?.token || updatedUser.token };
+      setUser(fullUpdatedUser);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(fullUpdatedUser));
+      toast.success('Notifications marked as read');
+    } catch (error: any) {
+      console.error('Failed to mark notifications as read', error);
+    }
+  };
+
   const value = {
     user,
     login,
@@ -148,6 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     forgotPassword,
     resetPassword,
     updateProfile,
+    markNotificationsAsRead,
     isAuthenticated: !!user,
     isLoading
   };
