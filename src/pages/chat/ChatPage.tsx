@@ -7,22 +7,65 @@ import { Input } from '../../components/ui/Input';
 import { ChatMessage } from '../../components/chat/ChatMessage';
 import { ChatUserList } from '../../components/chat/ChatUserList';
 import { useAuth } from '../../context/AuthContext';
-import { Message } from '../../types';
-import { getMessagesBetweenUsers, sendMessage, getConversationsForUser } from '../../data/messages';
+import { Message, ChatConversation } from '../../types';
 import { MessageCircle } from 'lucide-react';
 import api from '../../api/axiosConfig';
 import { getConnectionStatus } from '../../api/connectionApi';
 import { ConnectionClientStatus } from '../../types';
+import { useSocket } from '../../context/SocketContext';
+import * as messageApi from '../../api/messageApi';
+import { useNavigate } from 'react-router-dom';
 
 export const ChatPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const { user: currentUser } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [chatPartner, setChatPartner] = useState<any>(null);
   const [connStatus, setConnStatus] = useState<ConnectionClientStatus | null>(null);
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  const { socket } = useSocket();
+  const navigate = useNavigate();
+
+  // Initialize Socket.io listeners
+  useEffect(() => {
+    if (!socket || !currentUser || !userId) return;
+
+    const handleReceiveMessage = (message: Message) => {
+      // If the message is from our active chat partner, add to message list and mark read
+      if (message.senderId === userId) {
+        setMessages(prev => [...prev, message]);
+        messageApi.markMessagesAsRead(userId).catch(console.error);
+      }
+      // Always refresh conversations to update latest message snippets
+      fetchConversations();
+    };
+
+    const handleMessageSent = (message: Message) => {
+      if (message.receiverId === userId) {
+        setMessages(prev => [...prev, message]);
+      }
+      fetchConversations();
+    };
+
+    socket.on('receiveMessage', handleReceiveMessage);
+    socket.on('messageSent', handleMessageSent);
+
+    return () => {
+      socket.off('receiveMessage', handleReceiveMessage);
+      socket.off('messageSent', handleMessageSent);
+    };
+  }, [socket, currentUser, userId]);
+
+  const fetchConversations = async () => {
+    try {
+      const convs = await messageApi.getConversations();
+      setConversations(convs);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchChatPartner = async () => {
@@ -47,33 +90,59 @@ export const ChatPage: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      setConversations(getConversationsForUser(currentUser.id));
+      fetchConversations();
     }
   }, [currentUser]);
 
   useEffect(() => {
-    if (currentUser && userId) {
-      setMessages(getMessagesBetweenUsers(currentUser.id, userId));
-    }
+    const fetchMessages = async () => {
+      if (currentUser && userId) {
+        try {
+          const msgs = await messageApi.getMessagesBetweenUsers(userId);
+          setMessages(msgs);
+          await messageApi.markMessagesAsRead(userId);
+          fetchConversations();
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+        }
+      }
+    };
+    fetchMessages();
   }, [currentUser, userId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const handleCall = (isVideo: boolean) => {
+    if (!currentUser || !userId || !socket || !chatPartner) return;
+    
+    const roomId = [currentUser.id, userId].sort().join('-');
+    
+    // Emit call event to the other user
+    socket.emit('call-user', {
+      userToCallId: userId,
+      callerId: currentUser.id,
+      callerName: currentUser.name,
+      roomId,
+      isVideo
+    });
+    
+    // Navigate to the call page
+    navigate(`/call/${roomId}`, { state: { isVideo } });
+  };
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !currentUser || !userId) return;
+    if (!newMessage.trim() || !currentUser || !userId || !socket) return;
 
-    const message = sendMessage({
+    socket.emit('sendMessage', {
       senderId: currentUser.id,
       receiverId: userId,
-      content: newMessage,
+      content: newMessage
     });
 
-    setMessages([...messages, message]);
     setNewMessage('');
-    setConversations(getConversationsForUser(currentUser.id));
   };
 
   if (!currentUser) return null;
@@ -115,10 +184,22 @@ export const ChatPage: React.FC = () => {
               </div>
 
               <div className="flex space-x-2">
-                <Button variant="ghost" size="sm" className="rounded-full p-2" aria-label="Voice call">
+                <Button 
+                  onClick={() => handleCall(false)}
+                  variant="ghost" 
+                  size="sm" 
+                  className="rounded-full p-2" 
+                  aria-label="Voice call"
+                >
                   <Phone size={18} />
                 </Button>
-                <Button variant="ghost" size="sm" className="rounded-full p-2" aria-label="Video call">
+                <Button 
+                  onClick={() => handleCall(true)}
+                  variant="ghost" 
+                  size="sm" 
+                  className="rounded-full p-2" 
+                  aria-label="Video call"
+                >
                   <Video size={18} />
                 </Button>
                 <Button variant="ghost" size="sm" className="rounded-full p-2" aria-label="Info">
