@@ -64,7 +64,7 @@ export const Sidebar: React.FC = () => {
     { to: '/meetings', icon: <CalendarDays size={20} />, text: 'Meetings', badge: user?.upcomingMeetings },
     { to: '/messages', icon: <MessageCircle size={20} />, text: 'Messages' },
     { to: '/notifications', icon: <Bell size={20} />, text: 'Notifications', badge: unreadCount },
-    { to: '/deals', icon: <FileText size={20} />, text: 'Deals' },
+    { to: '/documents', icon: <FileText size={20} />, text: 'Documents' },
   ];
   
   const sidebarItems = user.role === 'entrepreneur' ? entrepreneurItems : investorItems;

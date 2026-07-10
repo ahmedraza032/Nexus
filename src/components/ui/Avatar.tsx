@@ -10,6 +10,17 @@ interface AvatarProps {
   status?: 'online' | 'offline' | 'away' | 'busy';
 }
 
+const resolveSrc = (src: string): string => {
+  if (!src) return src;
+  if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    return src;
+  }
+  if (src.startsWith('/uploads/')) {
+    return `http://localhost:5000${src}`;
+  }
+  return src;
+};
+
 export const Avatar: React.FC<AvatarProps> = ({
   src,
   alt,
@@ -43,7 +54,7 @@ export const Avatar: React.FC<AvatarProps> = ({
   return (
     <div className={`relative inline-block ${className}`}>
       <img
-        src={src}
+        src={resolveSrc(src)}
         alt={alt}
         className={`rounded-full object-cover ${sizeClasses[size]}`}
         onError={(e) => {

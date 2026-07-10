@@ -73,15 +73,39 @@ export interface CollaborationRequest {
   createdAt: string;
 }
 
-export interface Document {
-  id: string;
+export type DocumentStatus = 'draft' | 'active' | 'archived';
+
+export interface DocumentSignature {
+  imageUrl: string;
+  signedBy: string;
+  signedAt: string;
+}
+
+export interface DocUser {
+  _id: string;
   name: string;
-  type: string;
-  size: string;
-  lastModified: string;
-  shared: boolean;
-  url: string;
-  ownerId: string;
+  avatarUrl: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface AppDocument {
+  _id: string;
+  name: string;
+  originalName: string;
+  fileType: string;
+  mimeType: string;
+  size: number;
+  uploadedBy: DocUser;
+  sharedWith: DocUser[];
+  version: number;
+  status: DocumentStatus;
+  signature?: DocumentSignature;
+  isShared: boolean;
+  downloadUrl: string;
+  previewUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AuthContextType {

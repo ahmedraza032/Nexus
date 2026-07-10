@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { User, Lock, Bell, Globe, Palette, CreditCard, Building2, DollarSign, Users, MapPin, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Card, CardHeader, CardBody } from '../../components/ui/Card';
@@ -13,6 +13,10 @@ import { Entrepreneur, Investor } from '../../types';
 
 export const SettingsPage: React.FC = () => {
   const { user, updateProfile } = useAuth();
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   // Base profile state
   const [name, setName] = useState(user?.name || '');
@@ -47,6 +51,30 @@ export const SettingsPage: React.FC = () => {
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
   if (!user) return null;
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    setIsUploadingAvatar(true);
+    try {
+      const response = await api.post('/profiles/avatar', formData);
+      const newAvatarUrl = response.data.avatarUrl;
+      setAvatarUrl(newAvatarUrl);
+      toast.success('Photo updated successfully');
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Failed to upload photo';
+      toast.error(message);
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,10 +192,25 @@ export const SettingsPage: React.FC = () => {
               <form onSubmit={handleSaveProfile} className="space-y-6">
                 {/* Avatar */}
                 <div className="flex items-center gap-6">
-                  <Avatar src={user.avatarUrl} alt={user.name} size="xl" />
+                  <Avatar src={avatarUrl} alt={user.name} size="xl" />
                   <div>
-                    <Button variant="outline" size="sm" type="button">Change Photo</Button>
-                    <p className="mt-2 text-sm text-gray-500">JPG, GIF or PNG. Max size of 800K</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg,image/gif"
+                      className="hidden"
+                      onChange={handleAvatarChange}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      isLoading={isUploadingAvatar}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Change Photo
+                    </Button>
+                    <p className="mt-2 text-sm text-gray-500">JPG, GIF or PNG. Max size of 5MB</p>
                   </div>
                 </div>
 

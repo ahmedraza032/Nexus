@@ -9,8 +9,10 @@ import profileRoutes from './routes/profileRoutes';
 import meetingRoutes from './routes/meetingRoutes';
 import connectionRoutes from './routes/connectionRoutes';
 import messageRoutes from './routes/messageRoutes';
+import documentRoutes from './routes/documentRoutes';
 import { seedDemoUsers } from './scripts/seedDemoUsers';
 import { Message } from './models/Message';
+import path from 'path';
 
 dotenv.config();
 
@@ -47,9 +49,29 @@ app.use('/api/profiles', profileRoutes);
 app.use('/api/meetings', meetingRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/documents', documentRoutes);
+
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/', (req, res) => {
   res.send('API is running...');
+});
+
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ message: 'File too large. Maximum size is 5MB.' });
+      return;
+    }
+    res.status(400).json({ message: err.message });
+    return;
+  }
+  if (err.message?.includes('Invalid file type') || err.message?.includes('must be an image')) {
+    res.status(400).json({ message: err.message });
+    return;
+  }
+  console.error(err);
+  res.status(500).json({ message: 'Server error' });
 });
 
 // Socket.IO Logic

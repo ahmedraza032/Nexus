@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { User } from '../models/User';
 import { Meeting } from '../models/Meeting';
 import { AuthRequest } from '../middleware/authMiddleware';
@@ -142,6 +144,41 @@ export const getAllProfiles = async (req: Request, res: Response): Promise<void>
     const query = role ? { role: role as 'entrepreneur' | 'investor' } : {};
     const users = await User.find(query).select('-password');
     res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: (error as Error).message });
+  }
+};
+
+// @desc    Upload avatar
+// @route   POST /api/profiles/avatar
+// @access  Private
+export const uploadAvatar = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ message: 'No file uploaded' });
+      return;
+    }
+
+    const user = await User.findById(req.user!._id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const avatarUrl = `${baseUrl}/uploads/avatars/${path.basename(req.file.path)}`;
+
+    if (user.avatarUrl) {
+      const oldPath = path.join(__dirname, '..', '..', 'uploads', 'avatars', path.basename(user.avatarUrl));
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    }
+
+    user.avatarUrl = avatarUrl;
+    await user.save();
+
+    res.status(200).json({ avatarUrl, user });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: (error as Error).message });
   }
