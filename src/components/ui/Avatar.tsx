@@ -16,7 +16,7 @@ const resolveSrc = (src: string): string => {
     return src;
   }
   if (src.startsWith('/uploads/')) {
-    return `http://localhost:5000${src}`;
+    return `${import.meta.env.VITE_API_URL}${src}`;
   }
   return src;
 };

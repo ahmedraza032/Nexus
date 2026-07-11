@@ -44,7 +44,7 @@ const DocumentViewerModal: React.FC<Props> = ({ isOpen, onClose, document: doc }
     setXlsxHtml('');
 
     const mime = doc.mimeType;
-    const url = `http://localhost:5000/api/documents/${doc._id}/preview`;
+    const url = `${import.meta.env.VITE_API_URL}/api/documents/${doc._id}/preview`;
 
     fetch(url, { headers: getAuthHeaders() })
       .then((res) => {
