@@ -29,7 +29,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (user) {
       // Connect to the Express server where Socket.IO is running
-      const newSocket = io('http://localhost:5000');
+      const newSocket = io(import.meta.env.VITE_API_URL);
       socketRef.current = newSocket;
       
       newSocket.on('connect', () => {
