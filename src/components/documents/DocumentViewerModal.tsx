@@ -4,6 +4,7 @@ import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, FileText, Aler
 import { Button } from '../ui/Button';
 import { AppDocument } from '../../types';
 import { downloadDocument } from '../../api/documentApi';
+import axios from '../../api/axiosConfig';
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
@@ -12,16 +13,6 @@ interface Props {
   onClose: () => void;
   document: AppDocument | null;
 }
-
-const getAuthHeaders = () => {
-  try {
-    const stored = localStorage.getItem('business_nexus_user');
-    const token = stored ? JSON.parse(stored).token : '';
-    return { Authorization: `Bearer ${token}` };
-  } catch {
-    return {};
-  }
-};
 
 const DocumentViewerModal: React.FC<Props> = ({ isOpen, onClose, document: doc }) => {
   const [loading, setLoading] = useState(true);
@@ -44,14 +35,10 @@ const DocumentViewerModal: React.FC<Props> = ({ isOpen, onClose, document: doc }
     setXlsxHtml('');
 
     const mime = doc.mimeType;
-    const url = `${import.meta.env.VITE_API_URL}/api/documents/${doc._id}/preview`;
 
-    fetch(url, { headers: getAuthHeaders() })
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.blob();
-      })
-      .then(async (blob) => {
+    axios.get(`/documents/${doc._id}/preview`, { responseType: 'blob' })
+      .then(async (response) => {
+        const blob = response.data as Blob;
         const blobUrl_ = URL.createObjectURL(blob);
 
         if (mime === 'application/pdf') {
@@ -85,7 +72,7 @@ const DocumentViewerModal: React.FC<Props> = ({ isOpen, onClose, document: doc }
         }
       })
       .catch((err) => {
-        setError(err.message || 'Failed to load document');
+        setError(err?.response?.data?.message || err.message || 'Failed to load document');
       })
       .finally(() => {
         setLoading(false);
